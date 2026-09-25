@@ -20,6 +20,7 @@ Try the faucet here: **[elysium-testnet-faucet--goodluckigweze.replit.app](https
 - Automatically switches to Elysium Testnet or adds the network when needed
 - Shows the connected wallet address and live ELYS token balance
 - Lets each eligible wallet claim 100 ELYS through the faucet contract
+- Enforces a **5-minute cooldown per wallet** between successful claims
 - Displays clear pending, success, error, and cooldown messages
 - Uses no token approvals and never requests permission to move user funds
 
@@ -32,6 +33,7 @@ Try the faucet here: **[elysium-testnet-faucet--goodluckigweze.replit.app](https
 | RPC URL | `https://testnet-rpc.elysium.kinetiq.xyz` |
 | Token | Elysium Test Token (ELYS) |
 | Claim amount | `100 ELYS` |
+| Claim cooldown | `5 minutes per wallet` |
 | Faucet contract | `0x245bFe8c6c2429f6a7743d53377Ae39b98500459` |
 
 ## Quick start
@@ -47,6 +49,9 @@ python3 -m http.server 8080
 
 3. Visit `http://localhost:8080`.
 4. Connect a wallet and claim test ELYS.
+5. After a successful claim, wait 5 minutes before claiming again from the same wallet.
+
+The cooldown is enforced by the faucet contract, so refreshing the page or reconnecting the wallet does not bypass it.
 
 The page loads [ethers.js v6](https://docs.ethers.org/v6/) from the jsDelivr CDN.
 
