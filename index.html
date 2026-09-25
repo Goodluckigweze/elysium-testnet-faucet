@@ -1,0 +1,1090 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#070b14" />
+    <meta
+      name="description"
+      content="Claim 100 ELYS from the Elysium Testnet faucet."
+    />
+    <title>Elysium Testnet Faucet</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #070b14;
+        --panel: rgba(15, 22, 37, 0.82);
+        --panel-solid: #0f1625;
+        --panel-soft: #121c2e;
+        --line: rgba(152, 171, 211, 0.14);
+        --line-strong: rgba(152, 171, 211, 0.25);
+        --text: #f4f7ff;
+        --muted: #8996ad;
+        --muted-light: #b9c4d6;
+        --accent: #7d75ff;
+        --accent-light: #a8a3ff;
+        --cyan: #59d9dc;
+        --green: #59d99f;
+        --red: #ff7b90;
+        --shadow: 0 22px 70px rgba(0, 0, 0, 0.42);
+        --radius-lg: 28px;
+        --radius-md: 16px;
+        --ease: 180ms ease;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-width: 320px;
+        background: var(--bg);
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        overflow-x: hidden;
+        background:
+          radial-gradient(circle at 8% 12%, rgba(91, 82, 255, 0.16), transparent 31rem),
+          radial-gradient(circle at 90% 92%, rgba(39, 186, 198, 0.12), transparent 27rem),
+          var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body::before {
+        position: fixed;
+        z-index: -1;
+        inset: 0;
+        pointer-events: none;
+        content: "";
+        opacity: 0.22;
+        background-image: linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+        background-size: 52px 52px;
+        mask-image: linear-gradient(to bottom, black, transparent 80%);
+      }
+
+      button {
+        border: 0;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+      }
+
+      .page-shell {
+        width: min(1120px, calc(100% - 40px));
+        min-height: 100vh;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 30px 0;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--text);
+        text-decoration: none;
+        font-size: 15px;
+        font-weight: 750;
+        letter-spacing: -0.02em;
+      }
+
+      .brand-mark {
+        position: relative;
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        overflow: hidden;
+        border: 1px solid rgba(168, 163, 255, 0.36);
+        border-radius: 11px;
+        background: linear-gradient(145deg, #7d75ff, #4c49b7);
+        box-shadow: 0 7px 20px rgba(100, 91, 245, 0.28);
+      }
+
+      .brand-mark::after {
+        position: absolute;
+        width: 26px;
+        height: 26px;
+        border: 1px solid rgba(255, 255, 255, 0.36);
+        border-radius: 50%;
+        content: "";
+      }
+
+      .brand-mark svg {
+        position: relative;
+        z-index: 1;
+        width: 17px;
+        height: 17px;
+        fill: none;
+        stroke: white;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+
+      .network-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(20, 29, 48, 0.58);
+        color: var(--muted-light);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .network-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--cyan);
+        box-shadow: 0 0 0 4px rgba(89, 217, 220, 0.1);
+      }
+
+      .network-dot.is-warning {
+        background: #f7c863;
+        box-shadow: 0 0 0 4px rgba(247, 200, 99, 0.1);
+      }
+
+      main {
+        flex: 1;
+        display: grid;
+        place-items: center;
+        padding: 50px 0 72px;
+      }
+
+      .content {
+        width: min(100%, 760px);
+        text-align: center;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 22px;
+        color: var(--accent-light);
+        font-size: 12px;
+        font-weight: 750;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow svg {
+        width: 15px;
+        height: 15px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+
+      h1 {
+        max-width: 670px;
+        margin: 0 auto;
+        font-size: clamp(2.55rem, 7vw, 5rem);
+        font-weight: 780;
+        letter-spacing: -0.065em;
+        line-height: 0.98;
+      }
+
+      .hero-copy {
+        max-width: 530px;
+        margin: 24px auto 0;
+        color: var(--muted);
+        font-size: clamp(0.98rem, 2vw, 1.08rem);
+        line-height: 1.65;
+      }
+
+      .faucet-card {
+        position: relative;
+        width: min(100%, 650px);
+        margin: 42px auto 0;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        background: linear-gradient(135deg, rgba(24, 34, 57, 0.94), rgba(13, 19, 33, 0.92));
+        box-shadow: var(--shadow);
+      }
+
+      .faucet-card::before {
+        position: absolute;
+        z-index: -1;
+        inset: 9% 20%;
+        border-radius: 50%;
+        background: rgba(125, 117, 255, 0.19);
+        content: "";
+        filter: blur(42px);
+      }
+
+      .card-inner {
+        padding: clamp(22px, 5vw, 38px);
+        border: 1px solid rgba(152, 171, 211, 0.11);
+        border-radius: 21px;
+        background: rgba(8, 13, 24, 0.57);
+      }
+
+      .amount-label {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 650;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+
+      .amount {
+        margin: 9px 0 4px;
+        font-size: clamp(3.6rem, 12vw, 6.6rem);
+        font-weight: 800;
+        letter-spacing: -0.09em;
+        line-height: 0.98;
+        background: linear-gradient(135deg, #ffffff 10%, #aaa5ff 60%, #6ee0df);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .token-name {
+        margin: 0;
+        color: var(--muted-light);
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .wallet-panel {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 31px;
+        text-align: left;
+      }
+
+      .stat {
+        min-width: 0;
+        padding: 15px 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        background: rgba(18, 28, 46, 0.68);
+      }
+
+      .stat-label {
+        display: block;
+        margin-bottom: 7px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+      }
+
+      .stat-value {
+        display: block;
+        overflow: hidden;
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 650;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .stat-value.balance {
+        color: var(--cyan);
+      }
+
+      .connect-button,
+      .claim-button {
+        display: inline-flex;
+        width: 100%;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        min-height: 54px;
+        border-radius: 14px;
+        font-size: 14px;
+        font-weight: 750;
+        transition:
+          transform var(--ease),
+          box-shadow var(--ease),
+          opacity var(--ease),
+          background var(--ease);
+      }
+
+      .connect-button {
+        margin-top: 22px;
+        border: 1px solid var(--line-strong);
+        background: rgba(25, 36, 58, 0.8);
+        color: var(--text);
+      }
+
+      .connect-button:hover:not(:disabled) {
+        background: rgba(38, 52, 81, 0.92);
+        transform: translateY(-1px);
+      }
+
+      .claim-button {
+        margin-top: 10px;
+        background: linear-gradient(100deg, #7770ff, #5554d8);
+        box-shadow: 0 11px 28px rgba(91, 84, 236, 0.25);
+        color: white;
+      }
+
+      .claim-button:hover:not(:disabled) {
+        background: linear-gradient(100deg, #8983ff, #6261e8);
+        box-shadow: 0 15px 34px rgba(91, 84, 236, 0.36);
+        transform: translateY(-1px);
+      }
+
+      .connect-button:disabled,
+      .claim-button:disabled {
+        opacity: 0.45;
+      }
+
+      .button-icon {
+        width: 17px;
+        height: 17px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+
+      .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .status {
+        display: none;
+        align-items: flex-start;
+        gap: 10px;
+        margin-top: 18px;
+        padding: 13px 14px;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        color: var(--muted-light);
+        font-size: 13px;
+        line-height: 1.45;
+        text-align: left;
+      }
+
+      .status.is-visible {
+        display: flex;
+      }
+
+      .status.success {
+        border-color: rgba(89, 217, 159, 0.22);
+        background: rgba(89, 217, 159, 0.08);
+        color: #9af1c8;
+      }
+
+      .status.error {
+        border-color: rgba(255, 123, 144, 0.25);
+        background: rgba(255, 123, 144, 0.08);
+        color: #ffb3c0;
+      }
+
+      .status.info {
+        border-color: rgba(89, 217, 220, 0.21);
+        background: rgba(89, 217, 220, 0.07);
+        color: #a6e9e9;
+      }
+
+      .status-icon {
+        flex: 0 0 auto;
+        width: 17px;
+        height: 17px;
+        margin-top: 1px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 2;
+      }
+
+      .safety-note {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        margin: 24px auto 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+        text-align: left;
+      }
+
+      .safety-note strong {
+        color: var(--muted-light);
+        font-weight: 650;
+      }
+
+      .safety-note svg {
+        flex: 0 0 auto;
+        width: 17px;
+        height: 17px;
+        margin-top: 1px;
+        fill: none;
+        stroke: var(--green);
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.7;
+      }
+
+      .details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 37px;
+        text-align: left;
+      }
+
+      .detail {
+        padding: 15px 16px;
+        border-top: 1px solid var(--line);
+      }
+
+      .detail-label {
+        display: block;
+        margin-bottom: 7px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+      }
+
+      .detail-value {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        min-width: 0;
+        color: var(--muted-light);
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 11px;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+      }
+
+      .copy-address {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        padding: 3px;
+        border-radius: 5px;
+        background: transparent;
+        color: var(--muted);
+      }
+
+      .copy-address:hover {
+        background: rgba(255, 255, 255, 0.07);
+        color: var(--text);
+      }
+
+      .copy-address svg {
+        width: 13px;
+        height: 13px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+
+      footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 25px 0;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .footer-note {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .footer-note svg {
+        width: 14px;
+        height: 14px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.7;
+      }
+
+      .footer-chain {
+        color: var(--muted-light);
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      }
+
+      @media (max-width: 600px) {
+        .page-shell {
+          width: min(100% - 28px, 560px);
+        }
+
+        .topbar {
+          padding: 20px 0;
+        }
+
+        .network-pill {
+          padding: 7px 9px;
+          font-size: 10px;
+        }
+
+        main {
+          align-items: start;
+          padding: 45px 0 54px;
+        }
+
+        .eyebrow {
+          margin-bottom: 17px;
+          font-size: 10px;
+        }
+
+        .hero-copy {
+          margin-top: 18px;
+          font-size: 14px;
+        }
+
+        .faucet-card {
+          margin-top: 31px;
+          border-radius: 22px;
+        }
+
+        .card-inner {
+          padding: 23px 17px 20px;
+          border-radius: 16px;
+        }
+
+        .wallet-panel,
+        .details {
+          grid-template-columns: 1fr;
+        }
+
+        .wallet-panel {
+          margin-top: 27px;
+        }
+
+        .details {
+          gap: 0;
+          margin-top: 26px;
+        }
+
+        .detail {
+          padding: 13px 5px;
+        }
+
+        footer {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 10px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="Elysium Testnet Faucet home">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 4v16M7 8l5-4 5 4M7 16l5 4 5-4" />
+            </svg>
+          </span>
+          <span>Elysium Faucet</span>
+        </a>
+        <div class="network-pill" id="networkPill">
+          <span class="network-dot is-warning" id="networkDot"></span>
+          <span id="networkLabel">Testnet</span>
+        </div>
+      </header>
+
+      <main>
+        <section class="content" aria-labelledby="pageTitle">
+          <p class="eyebrow">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3v18M7 7l5-4 5 4M7 17l5 4 5-4" />
+            </svg>
+            Elysium Testnet
+          </p>
+          <h1 id="pageTitle">Test, build, and ship on Elysium.</h1>
+          <p class="hero-copy">
+            Get test ELYS for deploying contracts, trying new ideas, and building the next
+            generation of onchain apps.
+          </p>
+
+          <div class="faucet-card">
+            <div class="card-inner">
+              <p class="amount-label">Your testnet allocation</p>
+              <p class="amount">100</p>
+              <p class="token-name">Elysium Test Token (ELYS)</p>
+
+              <div class="wallet-panel" aria-live="polite">
+                <div class="stat">
+                  <span class="stat-label">Wallet</span>
+                  <span class="stat-value" id="walletAddress">Not connected</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-label">ELYS balance</span>
+                  <span class="stat-value balance" id="walletBalance">— ELYS</span>
+                </div>
+              </div>
+
+              <button class="connect-button" id="connectButton" type="button">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3" y="5" width="18" height="14" rx="2" />
+                  <path d="M7 9h.01M7 15h4M15 12h3" />
+                </svg>
+                <span id="connectButtonLabel">Connect Wallet</span>
+              </button>
+
+              <button class="claim-button" id="claimButton" type="button" disabled>
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 3v14M7 12l5 5 5-5M5 21h14" />
+                </svg>
+                <span id="claimButtonLabel">Claim 100 ELYS</span>
+              </button>
+
+              <div class="status" id="status" role="status" aria-live="polite">
+                <svg class="status-icon" id="statusIcon" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 8v4M12 16h.01" />
+                </svg>
+                <span id="statusMessage"></span>
+              </div>
+
+              <div class="safety-note">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 3 20 6v5c0 5-3.3 8.3-8 10-4.7-1.7-8-5-8-10V6l8-3Z" />
+                  <path d="m8.5 12 2.2 2.2 4.8-5" />
+                </svg>
+                <span>
+                  <strong>This faucet never asks for token approval and cannot drain your wallet.</strong>
+                  It is completely safe.
+                </span>
+              </div>
+
+              <div class="details">
+                <div class="detail">
+                  <span class="detail-label">Network</span>
+                  <span class="detail-value">Elysium Testnet · Chain ID 99801</span>
+                </div>
+                <div class="detail">
+                  <span class="detail-label">Faucet contract</span>
+                  <span class="detail-value">
+                    <span id="contractAddress">0x245bFe8c...98500459</span>
+                    <button
+                      class="copy-address"
+                      id="copyContractButton"
+                      type="button"
+                      aria-label="Copy faucet contract address"
+                      title="Copy address"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="8" y="8" width="11" height="11" rx="2" />
+                        <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+                      </svg>
+                    </button>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <span class="footer-note">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3v18M7 7l5-4 5 4M7 17l5 4 5-4" />
+          </svg>
+          Built for the Elysium developer community
+        </span>
+        <span class="footer-chain">ELYS · TESTNET · 99801</span>
+      </footer>
+    </div>
+
+    <script>
+      (() => {
+        "use strict";
+
+        const CONFIG = Object.freeze({
+          chainId: 99801,
+          chainIdHex: "0x185d9",
+          chainName: "Elysium Testnet",
+          rpcUrl: "https://testnet-rpc.elysium.kinetiq.xyz",
+          nativeCurrency: {
+            name: "Elysium",
+            symbol: "ELYS",
+            decimals: 18,
+          },
+          faucetAddress: "0x245bFe8c6c2429f6a7743d53377Ae39b98500459",
+          claimAmount: "100",
+        });
+
+        const FAUCET_ABI = [
+          "function claim() external",
+          "function balanceOf(address account) view returns (uint256)",
+          "function decimals() view returns (uint8)",
+        ];
+
+        const els = {
+          claimButton: document.getElementById("claimButton"),
+          claimButtonLabel: document.getElementById("claimButtonLabel"),
+          connectButton: document.getElementById("connectButton"),
+          connectButtonLabel: document.getElementById("connectButtonLabel"),
+          copyContractButton: document.getElementById("copyContractButton"),
+          contractAddress: document.getElementById("contractAddress"),
+          networkDot: document.getElementById("networkDot"),
+          networkLabel: document.getElementById("networkLabel"),
+          status: document.getElementById("status"),
+          statusIcon: document.getElementById("statusIcon"),
+          statusMessage: document.getElementById("statusMessage"),
+          walletAddress: document.getElementById("walletAddress"),
+          walletBalance: document.getElementById("walletBalance"),
+        };
+
+        let browserProvider = null;
+        let signer = null;
+        let currentAddress = null;
+
+        function shortenAddress(address) {
+          return `${address.slice(0, 6)}...${address.slice(-4)}`;
+        }
+
+        function setStatus(message, type = "info") {
+          els.status.className = `status is-visible ${type}`;
+          els.statusMessage.textContent = message;
+
+          const icons = {
+            success:
+              '<path d="m5 12 4 4L19 6" /><circle cx="12" cy="12" r="9" />',
+            error:
+              '<path d="M8 8l8 8M16 8l-8 8" /><circle cx="12" cy="12" r="9" />',
+            info:
+              '<circle cx="12" cy="12" r="9" /><path d="M12 8v4M12 16h.01" />',
+          };
+          els.statusIcon.innerHTML = icons[type] || icons.info;
+        }
+
+        function clearStatus() {
+          els.status.className = "status";
+          els.statusMessage.textContent = "";
+        }
+
+        function setNetworkState(isCorrect) {
+          els.networkDot.classList.toggle("is-warning", !isCorrect);
+          els.networkLabel.textContent = isCorrect ? "Elysium Testnet" : "Network required";
+        }
+
+        function setConnectButton(connected) {
+          els.connectButtonLabel.textContent = connected ? "Wallet Connected" : "Connect Wallet";
+        }
+
+        function setClaimLoading(isLoading) {
+          els.claimButton.disabled = isLoading || !currentAddress;
+          els.connectButton.disabled = isLoading;
+          if (isLoading) {
+            els.claimButtonLabel.innerHTML = '<span class="spinner" aria-hidden="true"></span> Claiming…';
+          } else {
+            els.claimButtonLabel.textContent = "Claim 100 ELYS";
+          }
+        }
+
+        function getProvider() {
+          if (!window.ethereum) {
+            throw new Error("No wallet detected. Install MetaMask or another EVM wallet to continue.");
+          }
+          return new ethers.BrowserProvider(window.ethereum);
+        }
+
+        async function switchToElysium() {
+          try {
+            await window.ethereum.request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: CONFIG.chainIdHex }],
+            });
+          } catch (switchError) {
+            if (switchError.code !== 4902 && switchError.code !== -32603) {
+              throw switchError;
+            }
+
+            await window.ethereum.request({
+              method: "wallet_addEthereumChain",
+              params: [
+                {
+                  chainId: CONFIG.chainIdHex,
+                  chainName: CONFIG.chainName,
+                  nativeCurrency: CONFIG.nativeCurrency,
+                  rpcUrls: [CONFIG.rpcUrl],
+                },
+              ],
+            });
+          }
+        }
+
+        async function ensureElysiumNetwork() {
+          const network = await browserProvider.getNetwork();
+          if (Number(network.chainId) !== CONFIG.chainId) {
+            setNetworkState(false);
+            setStatus("Switching your wallet to Elysium Testnet…", "info");
+            await switchToElysium();
+            browserProvider = getProvider();
+          }
+          setNetworkState(true);
+        }
+
+        async function updateBalance() {
+          if (!browserProvider || !currentAddress) {
+            els.walletBalance.textContent = "— ELYS";
+            return;
+          }
+
+          try {
+            const token = new ethers.Contract(CONFIG.faucetAddress, FAUCET_ABI, browserProvider);
+            const [balance, decimals] = await Promise.all([
+              token.balanceOf(currentAddress),
+              token.decimals(),
+            ]);
+            const formatted = ethers.formatUnits(balance, decimals);
+            const displayBalance = Number(formatted).toLocaleString(undefined, {
+              maximumFractionDigits: 4,
+            });
+            els.walletBalance.textContent = `${displayBalance} ELYS`;
+          } catch {
+            els.walletBalance.textContent = "Unable to load";
+          }
+        }
+
+        function getReadableError(error) {
+          const rawMessage = [
+            error?.shortMessage,
+            error?.reason,
+            error?.info?.error?.message,
+            error?.message,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+          if (error?.code === 4001 || rawMessage.includes("user rejected")) {
+            return "Request cancelled in your wallet.";
+          }
+          if (
+            rawMessage.includes("cooldown") ||
+            rawMessage.includes("too soon") ||
+            rawMessage.includes("already claimed") ||
+            rawMessage.includes("claim limit")
+          ) {
+            return "This wallet is on cooldown. Please try again later.";
+          }
+          if (
+            rawMessage.includes("insufficient funds") ||
+            rawMessage.includes("funds")
+          ) {
+            return "The faucet contract is temporarily out of ELYS. Please try again later.";
+          }
+          if (rawMessage.includes("network") || rawMessage.includes("chain")) {
+            return "Please switch to Elysium Testnet and try again.";
+          }
+          if (rawMessage.includes("missing revert data") || rawMessage.includes("execution reverted")) {
+            return "The claim was declined by the faucet contract. You may be on cooldown.";
+          }
+          return error?.shortMessage || "Something went wrong while processing your claim.";
+        }
+
+        async function connectWallet() {
+          try {
+            if (!window.ethereum) {
+              setStatus(
+                "No wallet detected. Install MetaMask or another EVM-compatible wallet to continue.",
+                "error",
+              );
+              return;
+            }
+
+            browserProvider = getProvider();
+            await browserProvider.send("eth_requestAccounts", []);
+            await ensureElysiumNetwork();
+
+            signer = await browserProvider.getSigner();
+            currentAddress = await signer.getAddress();
+            els.walletAddress.textContent = shortenAddress(currentAddress);
+            els.walletAddress.title = currentAddress;
+            setConnectButton(true);
+            els.claimButton.disabled = false;
+            await updateBalance();
+            setStatus("Wallet connected. You are ready to claim your test ELYS.", "success");
+          } catch (error) {
+            setStatus(getReadableError(error), "error");
+            setNetworkState(false);
+          }
+        }
+
+        async function claimTokens() {
+          if (!currentAddress || !signer) {
+            await connectWallet();
+            return;
+          }
+
+          try {
+            await ensureElysiumNetwork();
+            signer = await browserProvider.getSigner();
+            setClaimLoading(true);
+            setStatus("Confirm the claim transaction in your wallet…", "info");
+
+            const faucet = new ethers.Contract(CONFIG.faucetAddress, FAUCET_ABI, signer);
+            const transaction = await faucet.claim();
+            setStatus("Transaction submitted. Waiting for confirmation…", "info");
+            await transaction.wait();
+
+            await updateBalance();
+            setStatus(
+              "Success! 100 ELYS has been sent to your wallet. You may need to wait for the cooldown before claiming again.",
+              "success",
+            );
+          } catch (error) {
+            setStatus(getReadableError(error), "error");
+          } finally {
+            setClaimLoading(false);
+            if (currentAddress) {
+              els.claimButton.disabled = false;
+            }
+          }
+        }
+
+        async function handleAccountsChanged(accounts) {
+          if (!accounts.length) {
+            currentAddress = null;
+            signer = null;
+            setConnectButton(false);
+            els.walletAddress.textContent = "Not connected";
+            els.walletAddress.removeAttribute("title");
+            els.claimButton.disabled = true;
+            els.walletBalance.textContent = "— ELYS";
+            setNetworkState(false);
+            clearStatus();
+            return;
+          }
+
+          currentAddress = accounts[0];
+          els.walletAddress.textContent = shortenAddress(currentAddress);
+          els.walletAddress.title = currentAddress;
+          setConnectButton(true);
+          try {
+            browserProvider = getProvider();
+            await ensureElysiumNetwork();
+            signer = await browserProvider.getSigner();
+            els.claimButton.disabled = false;
+            await updateBalance();
+          } catch (error) {
+            setStatus(getReadableError(error), "error");
+            els.claimButton.disabled = true;
+          }
+        }
+
+        async function handleChainChanged() {
+          if (!window.ethereum) return;
+          browserProvider = getProvider();
+          const network = await browserProvider.getNetwork();
+          const isCorrect = Number(network.chainId) === CONFIG.chainId;
+          setNetworkState(isCorrect);
+          if (!isCorrect) {
+            els.claimButton.disabled = true;
+            setStatus("Switch to Elysium Testnet to claim ELYS.", "error");
+            return;
+          }
+          if (currentAddress) {
+            signer = await browserProvider.getSigner();
+            els.claimButton.disabled = false;
+            await updateBalance();
+            setStatus("Connected to Elysium Testnet.", "success");
+          }
+        }
+
+        async function copyContractAddress() {
+          try {
+            await navigator.clipboard.writeText(CONFIG.faucetAddress);
+            const original = els.copyContractButton.innerHTML;
+            els.copyContractButton.innerHTML =
+              '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>';
+            els.copyContractButton.setAttribute("aria-label", "Contract address copied");
+            setTimeout(() => {
+              els.copyContractButton.innerHTML = original;
+              els.copyContractButton.setAttribute("aria-label", "Copy faucet contract address");
+            }, 1600);
+          } catch {
+            setStatus("Copy failed. The faucet address is shown above.", "error");
+          }
+        }
+
+        els.connectButton.addEventListener("click", connectWallet);
+        els.claimButton.addEventListener("click", claimTokens);
+        els.copyContractButton.addEventListener("click", copyContractAddress);
+
+        if (window.ethereum) {
+          window.ethereum.on("accountsChanged", handleAccountsChanged);
+          window.ethereum.on("chainChanged", handleChainChanged);
+          window.ethereum
+            .request({ method: "eth_accounts" })
+            .then(handleAccountsChanged)
+            .catch(() => {});
+        } else {
+          setStatus("Connect a wallet to get started.", "info");
+        }
+
+        els.contractAddress.textContent = `${CONFIG.faucetAddress.slice(0, 10)}...${CONFIG.faucetAddress.slice(-8)}`;
+      })();
+    </script>
+  </body>
+</html>
